@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     raymarch_shader = Shader.load(Shader.GLSL, vertex="./raymarcher.vert", fragment="./raymarcher.frag")
 
-    cube = Entity(model="cube", scale=3, shader=raymarch_shader)
+    cube = Entity(model="cube", scale=3.5, double_sided=True, shader=raymarch_shader)
 
     EditorCamera()
 
