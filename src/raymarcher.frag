@@ -144,7 +144,7 @@ void main() {
     }
 
     else {
-        color = background - max(0.95 * ray_direction.y, 0.0);
+        color = background - max(0.5 * ray_direction.y, 0.0);
     }
 
     color = pow(color, vec4(0.4545));
