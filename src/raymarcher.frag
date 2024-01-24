@@ -103,7 +103,7 @@ vec4 get_light(vec3 point, vec3 view_direction, vec4 color) {
     vec4 ambient_light = ambient_color * color;
     vec4 diffuse_light = max(dot(normal, light_direction), 0.0) * color;
     vec4 fresnel = 0.25 * pow(1.0 + dot(-view_direction, normal), 3.0) * color;
-    vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 16.0) * light_color;
+    vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 32.0) * light_color;
 
     float light_contib = get_shadow(point + normal * 0.02, normalize(light_position), length(light_position - point));
 
