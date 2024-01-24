@@ -20,10 +20,6 @@ if __name__ == "__main__":
     player = Player(colliders=colliders, position=Vec3(0, 2, 0))
 
 
-    def update():
-        cube.set_shader_input("u_resolution", window.size)
-
-
     def input(key):
         if key == "escape":
             mouse.locked = not mouse.locked

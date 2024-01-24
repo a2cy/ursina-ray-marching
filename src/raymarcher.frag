@@ -1,9 +1,9 @@
 #version 150
 
-uniform mat4 p3d_ProjectionMatrixInverse;
 uniform mat4 p3d_ViewMatrixInverse;
 uniform int osg_FrameNumber;
-uniform vec2 u_resolution;
+
+in vec3 fragcoord;
 
 out vec4 p3d_FragColor;
 
@@ -103,7 +103,7 @@ vec4 get_light(vec3 point, vec3 view_direction, vec4 color) {
     vec4 ambient_light = ambient_color * color;
     vec4 diffuse_light = max(dot(normal, light_direction), 0.0) * color;
     vec4 fresnel = 0.25 * pow(1.0 + dot(-view_direction, normal), 3.0) * color;
-    vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 32.0) * light_color;
+    vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 16.0) * light_color;
 
     float light_contib = get_shadow(point + normal * 0.02, normalize(light_position), length(light_position - point));
 
@@ -130,9 +130,7 @@ void main() {
 
     vec3 camera_position = p3d_ViewMatrixInverse[3].xyz / p3d_ViewMatrixInverse[3].w;
 
-    vec2 uv = (gl_FragCoord.xy / u_resolution.xy) * 2.0 - 1.0;
-    vec4 frag_position = p3d_ProjectionMatrixInverse * vec4(uv, 1.0, 1.0);
-    vec3 ray_direction = vec3(p3d_ViewMatrixInverse * vec4(normalize(frag_position.xyz / frag_position.w), 0.0));
+    vec3 ray_direction = normalize(fragcoord - camera_position);
 
     vec2 object = ray_march(camera_position, ray_direction);
 
