@@ -130,7 +130,7 @@ class Player(Entity):
             self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
             self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
 
-            self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
+            self.direction = Vec3(self.camera_pivot.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
             self.direction += self.up * (held_keys["e"] - held_keys["q"])
