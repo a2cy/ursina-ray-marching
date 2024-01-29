@@ -36,7 +36,7 @@ vec2 scene(vec3 point) {
     float cube_dist_2 = length(max(q_2,0.0)) + min(max(q_2.x,max(q_2.y,q_2.z)),0.0) - 0.2;
     vec2 cube_2 = vec2(cube_dist_2, 1.0);
 
-    float plane_dist = dot(point, vec3(0.0, 1.0, 0.0)) + 1.0;
+    float plane_dist = dot(point + vec3(0.0, 0.0 + 0.02 * (sin(28 * point.x) - sin(28 * point.z)), 0.0), vec3(0.0, 1.0, 0.0)) + 1.0;
     vec2 plane = vec2(plane_dist, 2.0);
 
     return get_union(get_union_round(cube_1, cube_2), plane);
@@ -105,7 +105,7 @@ vec4 get_light(vec3 point, vec3 view_direction, vec4 color) {
     vec4 fresnel = 0.25 * pow(1.0 + dot(-view_direction, normal), 3.0) * color;
     vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 32.0) * light_color;
 
-    float light_contib = get_shadow(point + normal * 0.02, normalize(light_position), length(light_position - point));
+    float light_contib = get_shadow(point + normal * 0.05, normalize(light_position), length(light_position - point));
 
     return ambient_light + fresnel + (diffuse_light + specular_light) * light_contib;
 }
