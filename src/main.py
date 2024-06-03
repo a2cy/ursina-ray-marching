@@ -1,13 +1,26 @@
 from ursina import *
+from ursina.shaders.screenspace_shaders.fxaa import fxaa_shader
+
 from FirstPersonController import Player, AABB
 
 
 if __name__ == "__main__":
     app = Ursina(borderless=False)
 
+    camera.shader = fxaa_shader
+
     raymarch_shader = Shader.load(Shader.GLSL, vertex="./raymarcher.vert", fragment="./raymarcher.frag")
 
-    cube = Entity(model="cube", scale=15, double_sided=True, shader=raymarch_shader)
+    grass_texture = load_texture("grass")
+
+    Sky()
+
+    cube = Entity(model="cube", scale=16, double_sided=True, shader=raymarch_shader)
+
+    light = Entity(model="sphere", scale=.2, position=Vec3(0, 5, 0))
+
+    cube.set_shader_input("u_light_position", light.position)
+    cube.set_shader_input("u_texture", grass_texture)
 
     floor_collider = AABB(Vec3(0, -0.5, 0), Vec3(0, 0, 0), Vec3(15, 0, 15))
     wall_1_collider = AABB(Vec3(7.5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 15))
@@ -26,5 +39,6 @@ if __name__ == "__main__":
 
         if key == "n":
             player.noclip_mode = not player.noclip_mode
+
 
     app.run()

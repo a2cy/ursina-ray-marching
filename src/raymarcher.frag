@@ -3,6 +3,9 @@
 uniform mat4 p3d_ViewMatrixInverse;
 uniform int osg_FrameNumber;
 
+uniform vec3 u_light_position;
+uniform sampler2D u_texture;
+
 in vec3 fragcoord;
 
 out vec4 p3d_FragColor;
@@ -10,6 +13,7 @@ out vec4 p3d_FragColor;
 const int MAX_STEPS = 256;
 const float MAX_DIST = 500.0;
 const float EPSILON = 0.001;
+const float TRIPLINAR_SCALE = 1;
 
 
 vec2 get_union(vec2 object_1, vec2 object_2) {
@@ -36,10 +40,14 @@ vec2 scene(vec3 point) {
     float cube_dist_2 = length(max(q_2,0.0)) + min(max(q_2.x,max(q_2.y,q_2.z)),0.0) - 0.2;
     vec2 cube_2 = vec2(cube_dist_2, 1.0);
 
-    float plane_dist = dot(point + vec3(0.0, 0.0 + 0.02 * (sin(28 * point.x) - sin(28 * point.z)), 0.0), vec3(0.0, 1.0, 0.0)) + 1.0;
+    vec3 q_3 = abs(point + vec3(0.0, -0.8, -2.0)) - 0.5;
+    float cube_dist_3 = length(max(q_3,0.0)) + min(max(q_3.x,max(q_3.y,q_3.z)),0.0);
+    vec2 cube_3 = vec2(cube_dist_3, 3.0);
+
+    float plane_dist = dot(point, vec3(0.0, 1.0, 0.0)) + 1.0;
     vec2 plane = vec2(plane_dist, 2.0);
 
-    return get_union(get_union_round(cube_1, cube_2), plane);
+    return get_union(get_union(get_union_round(cube_1, cube_2), cube_3), plane);
 }
 
 
@@ -67,12 +75,12 @@ vec3 get_normal(vec3 point) {
 }
 
 
-float get_shadow(vec3 position, vec3 direction, float distance) {
+float get_shadow(vec3 point, vec3 direction, float distance) {
     float res = 1.0;
     float dist;
 
     for (int i = 0; i < MAX_STEPS; i++) {
-        vec2 hit = scene(position + dist * direction);
+        vec2 hit = scene(point + dist * direction);
 
         dist += hit.x;
 
@@ -80,7 +88,7 @@ float get_shadow(vec3 position, vec3 direction, float distance) {
             break;
         }
 
-        res = min(res, 8.0 * hit.x / dist);
+        res = min(res, 16.0 * hit.x / dist);
     }
 
     if (dist < distance) {
@@ -91,13 +99,11 @@ float get_shadow(vec3 position, vec3 direction, float distance) {
 }
 
 
-vec4 get_light(vec3 point, vec3 view_direction, vec4 color) {
-    vec3 light_position = vec3(20.0, 40.0, -30.0);
+vec4 get_light(vec3 point, vec3 normal, vec3 view_direction, vec4 color) {
     vec4 ambient_color = vec4(0.2, 0.2, 0.25, 1.0);
     vec4 light_color = vec4(1.0, 1.0, 0.8, 1.0);
 
-    vec3 normal = get_normal(point);
-    vec3 light_direction = normalize(light_position - point);
+    vec3 light_direction = normalize(u_light_position - point);
     vec3 half_direction = normalize(light_direction + view_direction);
 
     vec4 ambient_light = ambient_color * color;
@@ -105,28 +111,41 @@ vec4 get_light(vec3 point, vec3 view_direction, vec4 color) {
     vec4 fresnel = 0.25 * pow(1.0 + dot(-view_direction, normal), 3.0) * color;
     vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 32.0) * light_color;
 
-    float light_contib = get_shadow(point + normal * 0.05, normalize(light_position), length(light_position - point));
+    float light_contib = get_shadow(point + normal * 0.05, light_direction, length(u_light_position - point));
 
     return ambient_light + fresnel + (diffuse_light + specular_light) * light_contib;
 }
 
 
-vec4 get_material(float id) {
+vec4 triplanar(vec3 point, vec3 normal, sampler2D texture_map) {
+    vec4 dx = texture(texture_map, vec2(point.zy / TRIPLINAR_SCALE));
+    vec4 dy = texture(texture_map, vec2(point.xz / TRIPLINAR_SCALE));
+    vec4 dz = texture(texture_map, vec2(point.xy / TRIPLINAR_SCALE));
+
+    vec3 weights = abs(normal.xyz);
+    weights = weights / (weights.x + weights.y + weights.z);
+
+    return dx * weights.x + dy * weights.y + dz * weights.z;
+}
+
+
+vec4 get_material(float id, vec3 point, vec3 normal) {
     vec4 color;
 
     switch (int(id)) {
         case 1:
-        color = vec4(0.9, 0.0, 0.0, 1.0); break;
+        color = vec4(1.0, 0.0, 0.0, 1.0); break;
         case 2:
-        color = vec4(0.2, 0.9, 0.0, 1.0); break;
+        color = vec4(vec3(0.2 + 0.4 * mod(floor(point.x) + floor(point.z), 2.0)), 1.0); break;
+        case 3:
+        color = triplanar(point, normal, u_texture); break;
     }
     return color;
 }
 
 
 void main() {
-    vec4 color;
-    vec4 background = vec4(0.5, 0.8, 0.9, 1.0);
+    vec4 color = vec4(0);
 
     vec3 camera_position = p3d_ViewMatrixInverse[3].xyz / p3d_ViewMatrixInverse[3].w;
 
@@ -136,14 +155,15 @@ void main() {
 
     if (object.x < MAX_DIST) {
         vec3 point = camera_position + object.x * ray_direction;
-        color = get_light(point, -ray_direction, get_material(object.y));
-        color = mix(color, background, 1.0 - exp(-0.0002 * object.x * object.x));
+        vec3 normal = get_normal(point);
+
+        color = get_light(point, normal, -ray_direction, get_material(object.y, point, normal));
+        color = mix(color, vec4(0), 1.0 - exp(-0.0008 * object.x * object.x));
     }
 
     else {
-        color = background - max(0.5 * ray_direction.y, 0.0);
+        discard;
     }
 
-    color = pow(color, vec4(0.4545));
-    p3d_FragColor = color;
+    p3d_FragColor = color.rgba;
 }

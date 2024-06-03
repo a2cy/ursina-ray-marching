@@ -48,34 +48,34 @@ class AABB:
 class Player(Entity):
 
     def __init__(self, colliders, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.walk_speed = 6
         self.fall_speed = 32
-        self.gravity = 2
+        self.gravity = 1.8
         self.acceleration = 16
-        self.jump_height = 1
+        self.jump_height = 1.2
+        self.sprint_multiplier = 1.6
 
-        self.noclip_speed = 8
+        self.noclip_speed = 24
         self.noclip_acceleration = 6
         self.noclip_mode = False
 
         self.colliders = colliders
         self.aabb_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
 
+        self.fov = 90
+        self.fov_multiplier = 1.12
         self.camera_pivot = Entity(parent=self)
         camera.parent = self.camera_pivot
         camera.position = Vec3(0,0,0)
         camera.rotation = Vec3(0,0,0)
-        camera.fov = 90
+        camera.fov = self.fov
         self.mouse_sensitivity = 80
 
         self.grounded = False
         self.direction = Vec3(0,0,0)
         self.velocity = Vec3(0,0,0)
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
 
     def aabb_broadphase(self, collider_1, collider_2, direction):
@@ -124,37 +124,35 @@ class Player(Entity):
 
 
     def update(self):
+        self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
+
+        self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
+        self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
+
         if self.noclip_mode:
-            self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
-
-            self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
-            self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
-
             self.direction = Vec3(self.camera_pivot.forward * (held_keys["w"] - held_keys["s"])
-                                  + self.right * (held_keys["d"] - held_keys["a"])).normalized()
+                              + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
             self.direction += self.up * (held_keys["e"] - held_keys["q"])
 
             self.velocity = lerp(self.velocity, self.direction * self.noclip_speed, self.noclip_acceleration * time.dt)
 
-            self.position += self.velocity * time.dt
-
         else:
-            self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
-
-            self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
-            self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
-
             if self.grounded and held_keys["space"]:
                 self.velocity.y = 2 * (self.fall_speed * self.gravity * self.jump_height)**.5
 
             self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
+            if held_keys["left shift"]:
+                self.direction *= self.sprint_multiplier
+                camera.fov = lerp(camera.fov, self.fov * self.fov_multiplier, self.acceleration * time.dt)
+
+            else:
+                camera.fov = lerp(camera.fov, self.fov, self.acceleration * time.dt)
+
             self.velocity.xz = lerp(self.velocity, self.direction * self.walk_speed, self.acceleration * time.dt).xz
             self.velocity.y = lerp(self.velocity.y, -self.fall_speed, self.gravity * time.dt)
-
-            self.aabb_collider.position = self.position
 
             self.grounded = False
 
@@ -189,7 +187,9 @@ class Player(Entity):
                 if collision_normal.y == 1:
                     self.grounded = True
 
-            self.position += self.velocity * time.dt
+        self.position += self.velocity * time.dt
+
+        self.aabb_collider.position = self.position
 
 
     def on_enable(self):
