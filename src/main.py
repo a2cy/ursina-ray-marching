@@ -1,13 +1,10 @@
 from ursina import *
-from ursina.shaders.screenspace_shaders.fxaa import fxaa_shader
 
 from FirstPersonController import Player, AABB
 
 
 if __name__ == "__main__":
     app = Ursina(borderless=False)
-
-    camera.shader = fxaa_shader
 
     raymarch_shader = Shader.load(Shader.GLSL, vertex="./raymarcher.vert", fragment="./raymarcher.frag")
 
