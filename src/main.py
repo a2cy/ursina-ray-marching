@@ -19,11 +19,11 @@ if __name__ == "__main__":
     cube.set_shader_input("u_light_position", light.position)
     cube.set_shader_input("u_texture", grass_texture)
 
-    floor_collider = AABB(Vec3(0, -0.5, 0), Vec3(0, 0, 0), Vec3(15, 0, 15))
-    wall_1_collider = AABB(Vec3(7.5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 15))
-    wall_2_collider = AABB(Vec3(-7.5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 15))
-    wall_3_collider = AABB(Vec3(0, 1.5, 7.5), Vec3(0, 0, 0), Vec3(15, 3, 1))
-    wall_4_collider = AABB(Vec3(0, 1.5, -7.5), Vec3(0, 0, 0), Vec3(15, 3, 1))
+    floor_collider = AABB(Vec3(0, -0.5, 0), Vec3(0), Vec3(15, 0, 15))
+    wall_1_collider = AABB(Vec3(7.5, 1.5, 0), Vec3(0), Vec3(1, 3, 15))
+    wall_2_collider = AABB(Vec3(-7.5, 1.5, 0), Vec3(0), Vec3(1, 3, 15))
+    wall_3_collider = AABB(Vec3(0, 1.5, 7.5), Vec3(0), Vec3(15, 3, 1))
+    wall_4_collider = AABB(Vec3(0, 1.5, -7.5), Vec3(0), Vec3(15, 3, 1))
 
     colliders = [floor_collider, wall_1_collider, wall_2_collider, wall_3_collider, wall_4_collider]
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     def input(key):
         if key == "escape":
-            mouse.locked = not mouse.locked
+            player.enabled = not player.enabled
 
         if key == "n":
             player.noclip_mode = not player.noclip_mode

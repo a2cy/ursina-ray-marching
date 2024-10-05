@@ -47,7 +47,7 @@ vec2 scene(vec3 point) {
     float plane_dist = dot(point, vec3(0.0, 1.0, 0.0)) + 1.0;
     vec2 plane = vec2(plane_dist, 2.0);
 
-    return get_union(get_union(get_union_round(cube_1, cube_2), cube_3), plane);
+    return get_union(get_union(get_union_round(cube_1, cube_2), cube_3), plane);;
 }
 
 

@@ -2,47 +2,28 @@ from ursina import *
 
 
 class AABB:
+
     def __init__(self, position, origin, scale):
-        self.position = position
-        self.origin = origin
         self.scale = scale
+        self.origin = origin
+        self.position = position
 
 
     @property
-    def x(self):
-        return self.position.x + self.origin.x
+    def position(self):
+        return self._position
 
-    @property
-    def y(self):
-        return self.position.y + self.origin.y
+    @position.setter
+    def position(self, value):
+        self._position = value
 
-    @property
-    def z(self):
-        return self.position.z + self.origin.z
+        self.x_1 = value.x + self.origin.x - self.scale.x / 2
+        self.y_1 = value.y + self.origin.y - self.scale.y / 2
+        self.z_1 = value.z + self.origin.z - self.scale.z / 2
 
-    @property
-    def x_1(self):
-        return self.position.x + self.origin.x - self.scale.x / 2
-
-    @property
-    def y_1(self):
-        return self.position.y + self.origin.y - self.scale.y / 2
-
-    @property
-    def z_1(self):
-        return self.position.z + self.origin.z - self.scale.z / 2
-
-    @property
-    def x_2(self):
-        return self.position.x + self.origin.x + self.scale.x / 2
-
-    @property
-    def y_2(self):
-        return self.position.y + self.origin.y + self.scale.y / 2
-
-    @property
-    def z_2(self):
-        return self.position.z + self.origin.z + self.scale.z / 2
+        self.x_2 = value.x + self.origin.x + self.scale.x / 2
+        self.y_2 = value.y + self.origin.y + self.scale.y / 2
+        self.z_2 = value.z + self.origin.z + self.scale.z / 2
 
 
 class Player(Entity):
@@ -62,7 +43,7 @@ class Player(Entity):
         self.noclip_mode = False
 
         self.colliders = colliders
-        self.aabb_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
+        self.player_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
 
         self.fov = 90
         self.fov_multiplier = 1.12
@@ -161,8 +142,8 @@ class Player(Entity):
                 collisions = []
 
                 for collider in self.colliders:
-                    if self.aabb_broadphase(self.aabb_collider, collider, velocity):
-                        collision_time, collision_normal = self.swept_aabb(self.aabb_collider, collider, velocity)
+                    if self.aabb_broadphase(self.player_collider, collider, velocity):
+                        collision_time, collision_normal = self.swept_aabb(self.player_collider, collider, velocity)
 
                         collisions.append((collision_time, collision_normal))
 
@@ -189,7 +170,7 @@ class Player(Entity):
 
         self.position += self.velocity * time.dt
 
-        self.aabb_collider.position = self.position
+        self.player_collider.position = self.position
 
 
     def on_enable(self):
@@ -204,22 +185,22 @@ if __name__ == "__main__":
     app = Ursina(borderless=False)
 
     ground = Entity(model="plane", texture="grass", scale=Vec3(1000, 1, 1000), texture_scale=Vec2(1000, 1000))
-    ground_collider = AABB(Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1000, 1, 1000))
+    ground_collider = AABB(Vec3(0, 0, 0), Vec3(0), Vec3(1000, 1, 1000))
 
     wall_1 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(5, 1.5, 0), texture_scale=Vec2(5, 3))
-    wall_1_collider = AABB(Vec3(5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 5))
+    wall_1_collider = AABB(Vec3(5, 1.5, 0), Vec3(0), Vec3(1, 3, 5))
 
     wall_2 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(-5, 1.5, 0), texture_scale=Vec2(5, 3))
-    wall_2_collider = AABB(Vec3(-5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 5))
+    wall_2_collider = AABB(Vec3(-5, 1.5, 0), Vec3(0), Vec3(1, 3, 5))
 
     wall_3 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, 5), texture_scale=Vec2(5, 3))
-    wall_3_collider = AABB(Vec3(0, 1.5, 5), Vec3(0, 0, 0), Vec3(5, 3, 1))
+    wall_3_collider = AABB(Vec3(0, 1.5, 5), Vec3(0), Vec3(5, 3, 1))
 
     wall_4 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, -5), texture_scale=Vec2(5, 3))
-    wall_4_collider = AABB(Vec3(0, 1.5, -5), Vec3(0, 0, 0), Vec3(5, 3, 1))
+    wall_4_collider = AABB(Vec3(0, 1.5, -5), Vec3(0), Vec3(5, 3, 1))
 
     ceiling = Entity(model="cube", texture="brick", scale=Vec3(11, 1, 11), position=Vec3(0, 3.5, 0), texture_scale=Vec2(11, 11))
-    ceiling_collider = AABB(Vec3(0, 3.5, 0), Vec3(0, 0, 0), Vec3(11, 1, 11))
+    ceiling_collider = AABB(Vec3(0, 3.5, 0), Vec3(0), Vec3(11, 1, 11))
 
     colliders = [ground_collider, wall_1_collider, wall_2_collider, wall_3_collider, wall_4_collider, ceiling_collider]
 
@@ -228,7 +209,7 @@ if __name__ == "__main__":
 
     def input(key):
         if key == "escape":
-            mouse.locked = not mouse.locked
+            player.enabled = not player.enabled
 
         if key == "n":
             player.noclip_mode = not player.noclip_mode
