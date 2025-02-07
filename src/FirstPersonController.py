@@ -4,8 +4,8 @@ from ursina import *
 class AABB:
 
     def __init__(self, position, origin, scale):
-        self.scale = scale
-        self.origin = origin
+        self._scale = scale
+        self._origin = origin
         self.position = position
 
 
@@ -17,13 +17,13 @@ class AABB:
     def position(self, value):
         self._position = value
 
-        self.x_1 = value.x + self.origin.x - self.scale.x / 2
-        self.y_1 = value.y + self.origin.y - self.scale.y / 2
-        self.z_1 = value.z + self.origin.z - self.scale.z / 2
+        self.x_1 = value.x + self._origin.x - self._scale.x / 2
+        self.y_1 = value.y + self._origin.y - self._scale.y / 2
+        self.z_1 = value.z + self._origin.z - self._scale.z / 2
 
-        self.x_2 = value.x + self.origin.x + self.scale.x / 2
-        self.y_2 = value.y + self.origin.y + self.scale.y / 2
-        self.z_2 = value.z + self.origin.z + self.scale.z / 2
+        self.x_2 = value.x + self._origin.x + self._scale.x / 2
+        self.y_2 = value.y + self._origin.y + self._scale.y / 2
+        self.z_2 = value.z + self._origin.z + self._scale.z / 2
 
 
 class Player(Entity):
@@ -32,31 +32,31 @@ class Player(Entity):
         super().__init__(**kwargs)
 
         self.walk_speed = 6
-        self.fall_speed = 32
-        self.gravity = 1.8
         self.acceleration = 16
-        self.jump_height = 1.2
         self.sprint_multiplier = 1.6
+
+        self.gravity = 25
+        self.jump_height = 1.2
+        self.grounded = False
 
         self.noclip_speed = 24
         self.noclip_acceleration = 6
         self.noclip_mode = False
 
+        self.player_collider = AABB(Vec3(0), Vec3(0, -.6, 0), Vec3(.8, 1.8, .8))
         self.colliders = colliders
-        self.player_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
 
         self.fov = 90
         self.fov_multiplier = 1.12
         self.camera_pivot = Entity(parent=self)
         camera.parent = self.camera_pivot
-        camera.position = Vec3(0,0,0)
-        camera.rotation = Vec3(0,0,0)
+        camera.position = Vec3(0)
+        camera.rotation = Vec3(0)
         camera.fov = self.fov
         self.mouse_sensitivity = 80
 
-        self.grounded = False
-        self.direction = Vec3(0,0,0)
-        self.velocity = Vec3(0,0,0)
+        self.direction = Vec3(0)
+        self.velocity = Vec3(0)
 
 
     def aabb_broadphase(self, collider_1, collider_2, direction):
@@ -86,16 +86,16 @@ class Player(Entity):
         z_exit = get_time(collider_2.z_2 - collider_1.z_1 if direction.z > 0 else collider_2.z_1 - collider_1.z_2, direction.z)
 
         if x_entry < 0 and y_entry < 0 and z_entry < 0:
-            return 1, Vec3(0, 0, 0)
+            return 1, Vec3(0)
 
         if x_entry > 1 or y_entry > 1 or z_entry > 1:
-            return 1, Vec3(0, 0, 0)
+            return 1, Vec3(0)
 
         entry_time = max(x_entry, y_entry, z_entry)
         exit_time = min(x_exit, y_exit, z_exit)
 
         if entry_time > exit_time:
-            return 1, Vec3(0, 0, 0)
+            return 1, Vec3(0)
 
         normal_x = (0, -1 if direction.x > 0 else 1)[entry_time == x_entry]
         normal_y = (0, -1 if direction.y > 0 else 1)[entry_time == y_entry]
@@ -108,7 +108,7 @@ class Player(Entity):
         self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
 
         self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
-        self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
+        self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -89, 89)
 
         if self.noclip_mode:
             self.direction = Vec3(self.camera_pivot.forward * (held_keys["w"] - held_keys["s"])
@@ -116,26 +116,28 @@ class Player(Entity):
 
             self.direction += self.up * (held_keys["e"] - held_keys["q"])
 
-            self.velocity = lerp(self.velocity, self.direction * self.noclip_speed, self.noclip_acceleration * time.dt)
+            self.velocity = lerp(self.velocity, self.direction * self.noclip_speed, self.noclip_acceleration * min(time.dt, .05))
 
         else:
             if self.grounded and held_keys["space"]:
-                self.velocity.y = 2 * (self.fall_speed * self.gravity * self.jump_height)**.5
+                self.velocity.y = (self.gravity * self.jump_height * 2)**.5
 
             self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
             if held_keys["left shift"]:
                 self.direction *= self.sprint_multiplier
-                camera.fov = lerp(camera.fov, self.fov * self.fov_multiplier, self.acceleration * time.dt)
+                camera.fov = lerp(camera.fov, self.fov * self.fov_multiplier, self.acceleration * min(time.dt, .05))
 
             else:
-                camera.fov = lerp(camera.fov, self.fov, self.acceleration * time.dt)
+                camera.fov = lerp(camera.fov, self.fov, self.acceleration * min(time.dt, .05))
 
-            self.velocity.xz = lerp(self.velocity, self.direction * self.walk_speed, self.acceleration * time.dt).xz
-            self.velocity.y = lerp(self.velocity.y, -self.fall_speed, self.gravity * time.dt)
+            self.velocity.xz = lerp(self.velocity, self.direction * self.walk_speed, self.acceleration * min(time.dt, .05)).xz
+            self.velocity.y = self.velocity.y - self.gravity * time.dt
 
             self.grounded = False
+
+            self.player_collider.position = self.position
 
             for _ in range(3):
                 velocity = self.velocity * time.dt
@@ -174,6 +176,7 @@ class Player(Entity):
 
 
     def on_enable(self):
+        mouse.position = Vec3(0)
         mouse.locked = True
 
 
@@ -184,28 +187,21 @@ class Player(Entity):
 if __name__ == "__main__":
     app = Ursina(borderless=False)
 
-    ground = Entity(model="plane", texture="grass", scale=Vec3(1000, 1, 1000), texture_scale=Vec2(1000, 1000))
-    ground_collider = AABB(Vec3(0, 0, 0), Vec3(0), Vec3(1000, 1, 1000))
+    ground = Entity(model="plane", texture="grass", scale=Vec3(100, 1, 100), texture_scale=Vec2(100, 100))
+    ground_collider = AABB(ground.position, Vec3(0, -.5, 0), ground.scale)
 
-    wall_1 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(5, 1.5, 0), texture_scale=Vec2(5, 3))
-    wall_1_collider = AABB(Vec3(5, 1.5, 0), Vec3(0), Vec3(1, 3, 5))
+    wall = Entity(model="cube", texture="brick", scale=Vec3(1, 3, 5), position=Vec3(5, 1.5, 0), texture_scale=Vec2(5, 3))
+    wall_collider = AABB(wall.position, Vec3(0), wall.scale)
 
-    wall_2 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(-5, 1.5, 0), texture_scale=Vec2(5, 3))
-    wall_2_collider = AABB(Vec3(-5, 1.5, 0), Vec3(0), Vec3(1, 3, 5))
+    box = Entity(model="cube", texture="brick", scale=Vec3(1), position=Vec3(3.5, .5, 0))
+    box_collider = AABB(box.position, Vec3(0), box.scale)
 
-    wall_3 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, 5), texture_scale=Vec2(5, 3))
-    wall_3_collider = AABB(Vec3(0, 1.5, 5), Vec3(0), Vec3(5, 3, 1))
+    ceiling = Entity(model="cube", texture="brick", scale=Vec3(2, 1, 5), position=Vec3(6.5, 3, 0), texture_scale=Vec2(2, 5))
+    ceiling_collider = AABB(ceiling.position, Vec3(0), ceiling.scale)
 
-    wall_4 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, -5), texture_scale=Vec2(5, 3))
-    wall_4_collider = AABB(Vec3(0, 1.5, -5), Vec3(0), Vec3(5, 3, 1))
-
-    ceiling = Entity(model="cube", texture="brick", scale=Vec3(11, 1, 11), position=Vec3(0, 3.5, 0), texture_scale=Vec2(11, 11))
-    ceiling_collider = AABB(Vec3(0, 3.5, 0), Vec3(0), Vec3(11, 1, 11))
-
-    colliders = [ground_collider, wall_1_collider, wall_2_collider, wall_3_collider, wall_4_collider, ceiling_collider]
+    colliders = [ground_collider, wall_collider, box_collider, ceiling_collider]
 
     player = Player(colliders, position=Vec3(0, 2.5, 0))
-
 
     def input(key):
         if key == "escape":
