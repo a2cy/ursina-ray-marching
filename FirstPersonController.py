@@ -141,6 +141,7 @@ class Player(Entity):
             self.velocity.y = max(self.velocity.y, -self.max_fall_speed)
 
             self.grounded = False
+            self.player_collider.position = self.position
             move_delta = self.velocity * time.dt
 
             for _ in range(3):
