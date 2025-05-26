@@ -1,18 +1,18 @@
 #version 150
 
 uniform mat4 p3d_ViewMatrixInverse;
-uniform int osg_FrameNumber;
 
 uniform vec3 u_light_position;
 uniform sampler2D u_texture;
+uniform float u_time;
 
 in vec3 fragcoord;
 
 out vec4 p3d_FragColor;
 
 const int MAX_STEPS = 256;
-const float MAX_DIST = 500.0;
-const float EPSILON = 0.001;
+const float MAX_DIST = 128.0;
+const float EPSILON = 0.0001;
 const float TRIPLINAR_SCALE = 1;
 
 
@@ -32,22 +32,21 @@ vec2 get_union_round(vec2 object_1, vec2 object_2) {
 
 
 vec2 scene(vec3 point) {
-    vec3 q_1 = abs(point + vec3(0.0 + 1.2 * sin(0.04 * osg_FrameNumber), 0.0, 0.0)) - 0.2;
+    float sphere_dist = length(point + vec3(0.0 + 1.2 * sin(4 * u_time), 0.0, 0.0)) - 0.4;
+    vec2 sphere = vec2(sphere_dist, 1.0);
+
+    vec3 q_1 = abs(point + vec3(0.0, 0.0, 0.0)) - 0.2;
     float cube_dist_1 = length(max(q_1,0.0)) + min(max(q_1.x,max(q_1.y,q_1.z)),0.0) - 0.2;
     vec2 cube_1 = vec2(cube_dist_1, 1.0);
 
-    vec3 q_2 = abs(point + vec3(0.0, 0.0, 0.0)) - 0.2;
-    float cube_dist_2 = length(max(q_2,0.0)) + min(max(q_2.x,max(q_2.y,q_2.z)),0.0) - 0.2;
-    vec2 cube_2 = vec2(cube_dist_2, 1.0);
-
-    vec3 q_3 = abs(point + vec3(0.0, -0.8, -2.0)) - 0.5;
-    float cube_dist_3 = length(max(q_3,0.0)) + min(max(q_3.x,max(q_3.y,q_3.z)),0.0);
-    vec2 cube_3 = vec2(cube_dist_3, 3.0);
+    vec3 q_2 = abs(point + vec3(0.0, -0.8, -2.0)) - 0.5;
+    float cube_dist_2 = length(max(q_2,0.0)) + min(max(q_2.x,max(q_2.y,q_2.z)),0.0);
+    vec2 cube_2 = vec2(cube_dist_2, 3.0);
 
     float plane_dist = dot(point, vec3(0.0, 1.0, 0.0)) + 1.0;
     vec2 plane = vec2(plane_dist, 2.0);
 
-    return get_union(get_union(get_union_round(cube_1, cube_2), cube_3), plane);;
+    return get_union(get_union(get_union_round(sphere, cube_1), cube_2), plane);;
 }
 
 
@@ -77,18 +76,16 @@ vec3 get_normal(vec3 point) {
 
 float get_shadow(vec3 point, vec3 direction, float distance) {
     float res = 1.0;
-    float dist;
+    float dist = 0.0;
 
     for (int i = 0; i < MAX_STEPS; i++) {
         vec2 hit = scene(point + dist * direction);
-
+        res = min(res, 16.0 * hit.x / dist);
         dist += hit.x;
 
-        if (hit.x < EPSILON || dist > MAX_DIST) {
+        if (hit.x < EPSILON || dist > distance) {
             break;
         }
-
-        res = min(res, 16.0 * hit.x / dist);
     }
 
     if (dist < distance) {
@@ -101,13 +98,13 @@ float get_shadow(vec3 point, vec3 direction, float distance) {
 
 vec4 get_light(vec3 point, vec3 normal, vec3 view_direction, vec4 color) {
     vec4 ambient_color = vec4(0.2, 0.2, 0.25, 1.0);
-    vec4 light_color = vec4(1.0, 1.0, 0.8, 1.0);
+    vec4 light_color = vec4(1.0, 1.0, 0.95, 1.0);
 
     vec3 light_direction = normalize(u_light_position - point);
     vec3 half_direction = normalize(light_direction + view_direction);
 
     vec4 ambient_light = ambient_color * color;
-    vec4 diffuse_light = max(dot(normal, light_direction), 0.0) * color;
+    vec4 diffuse_light = max(dot(normal, light_direction), 0.0) * color * light_color;
     vec4 specular_light = 0.25 * pow(max(dot(normal, half_direction), 0.0), 32.0) * light_color;
 
     float light_contib = get_shadow(point + normal * 0.05, light_direction, length(u_light_position - point));
@@ -133,7 +130,7 @@ vec4 get_material(float id, vec3 point, vec3 normal) {
 
     switch (int(id)) {
         case 1:
-        color = vec4(1.0, 0.0, 0.0, 1.0); break;
+        color = vec4(abs(sin(1.5 * u_time)), 0.0, abs(cos(1.5 * u_time)), 1.0); break;
         case 2:
         color = vec4(vec3(0.2 + 0.4 * mod(floor(point.x) + floor(point.z), 2.0)), 1.0); break;
         case 3:

@@ -29,6 +29,13 @@ colliders = [floor_collider, wall_1_collider, wall_2_collider, wall_3_collider, 
 player = Player(colliders=colliders, position=Vec3(0, 2, 0))
 
 
+u_time = 0
+def update():
+    global u_time
+    cube.set_shader_input("u_time", u_time)
+    u_time += time.dt
+
+
 def input(key):
     if key == "escape":
         player.enabled = not player.enabled
