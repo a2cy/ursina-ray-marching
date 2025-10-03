@@ -51,7 +51,7 @@ vec2 scene(vec3 point) {
 
 
 vec2 ray_march(vec3 position, vec3 direction) {
-    vec2 object;
+    vec2 object = vec2(0.0);
 
     for (int i = 0; i < MAX_STEPS; i++) {
         vec2 hit = scene(position + object.x * direction);
