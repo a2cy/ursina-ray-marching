@@ -147,14 +147,14 @@ void main() {
 
     vec3 ray_direction = normalize(fragcoord - camera_position);
 
-    vec2 object = ray_march(camera_position, ray_direction);
+    vec2 ray_hit = ray_march(camera_position, ray_direction);
 
-    if (object.x < MAX_DIST) {
-        vec3 point = camera_position + object.x * ray_direction;
+    if (ray_hit.x < MAX_DIST) {
+        vec3 point = camera_position + ray_hit.x * ray_direction;
         vec3 normal = get_normal(point);
 
-        color = get_light(point, normal, -ray_direction, get_material(object.y, point, normal));
-        color = mix(color, vec4(0), 1.0 - exp(-0.0008 * object.x * object.x));
+        color = get_light(point, normal, -ray_direction, get_material(ray_hit.y, point, normal));
+        color = mix(vec4(0), color, exp(-0.0008 * ray_hit.x * ray_hit.x));
     }
 
     else {
