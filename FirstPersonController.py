@@ -78,7 +78,6 @@ class Player(Entity):
         self.walk_speed = 6
         self.max_fall_speed = 60
         self.acceleration = 16
-        self.sprint_multiplier = 1.6
         self.jump_height = 1.2
         self.grounded = False
 
@@ -86,19 +85,18 @@ class Player(Entity):
         self.noclip_acceleration = 6
         self.noclip_mode = False
 
+        self.keybinds = {"forward": "w", "backward": "s", "left": "a", "right": "d", "up": "q", "down": "e", "jump": "space"}
+
         self.player_collider = AABBCollider(position=Vec3(0), origin=Vec3(0, -0.6, 0), scale=Vec3(0.8, 1.8, 0.8))
         self.colliders = colliders
 
-        self.fov = 90
-        self.fov_multiplier = 1.12
         self.camera_pivot = Entity(parent=self)
         camera.parent = self.camera_pivot
         camera.position = Vec3(0)
         camera.rotation = Vec3(0)
-        camera.fov = self.fov
+        camera.fov = 90
         self.mouse_sensitivity = 80
 
-        self.direction = Vec3(0)
         self.velocity = Vec3(0)
 
     def update(self) -> None:
@@ -108,30 +106,27 @@ class Player(Entity):
         self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -89, 89)
 
         if self.noclip_mode:
-            self.direction = Vec3(
-                self.camera_pivot.forward * (held_keys["w"] - held_keys["s"]) + self.right * (held_keys["d"] - held_keys["a"])
+            direction = Vec3(
+                self.camera_pivot.forward * (held_keys[self.keybinds["forward"]] - held_keys[self.keybinds["backward"]])
+                + self.right * (held_keys[self.keybinds["right"]] - held_keys[self.keybinds["left"]])
             ).normalized()
 
-            self.direction += self.up * (held_keys["e"] - held_keys["q"])
+            direction += self.up * (held_keys[self.keybinds["up"]] - held_keys[self.keybinds["down"]])
 
-            self.velocity = lerp(self.direction * self.noclip_speed, self.velocity, 0.5 ** (self.noclip_acceleration * time.dt))
+            self.velocity = lerp(direction * self.noclip_speed, self.velocity, 0.5 ** (self.noclip_acceleration * time.dt))
 
             self.position += self.velocity * time.dt
 
         else:
-            if self.grounded and held_keys["space"]:
+            if self.grounded and held_keys[self.keybinds["jump"]]:
                 self.velocity.y = (self.gravity * self.jump_height * 2) ** 0.5
 
-            self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"]) + self.right * (held_keys["d"] - held_keys["a"])).normalized()
+            direction = Vec3(
+                self.forward * (held_keys[self.keybinds["forward"]] - held_keys[self.keybinds["backward"]])
+                + self.right * (held_keys[self.keybinds["right"]] - held_keys[self.keybinds["left"]])
+            ).normalized()
 
-            if held_keys["left shift"]:
-                self.direction *= self.sprint_multiplier
-                camera.fov = lerp(self.fov * self.fov_multiplier, camera.fov, 0.5 ** (self.acceleration * time.dt))
-
-            else:
-                camera.fov = lerp(self.fov, camera.fov, 0.5 ** (self.acceleration * time.dt))
-
-            self.velocity.xz = lerp(self.direction * self.walk_speed, self.velocity, 0.5 ** (self.acceleration * time.dt)).xz
+            self.velocity.xz = lerp(direction * self.walk_speed, self.velocity, 0.5 ** (self.acceleration * time.dt)).xz
             self.velocity.y = self.velocity.y - self.gravity * min(time.dt, 0.5)
             self.velocity.y = max(self.velocity.y, -self.max_fall_speed)
 
